@@ -5,28 +5,42 @@
   <title>Carte dynamique</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <style>html, body, #map { height:100%; margin:0; padding:0; }</style>
+  <style>
+    html, body, #map { height:100%; margin:0; padding:0; }
+  </style>
 </head>
 <body>
   <div id="map"></div>
+
   <script>
-    // Quand Wix envoie un message
+    let map = null;
+
+    // Envoi un message pour dire à Wix que l'iframe est prête
+    window.parent.postMessage({ type: 'iframeReady' }, '*');
+
     window.addEventListener("message", (event) => {
       const data = event.data;
-      if (!data || !data.pins) return;
+      if (!data || !data.pins || !data.center) return;
 
-      // Effacer la carte précédente s'il y en a une
-      document.getElementById('map').innerHTML = '';
-
-      const map = L.map('map').setView(data.center, 6);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-      }).addTo(map);
+      if (!map) {
+        map = L.map('map').setView(data.center, 6);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+      } else {
+        map.setView(data.center, 6);
+        // Nettoie les marqueurs existants
+        map.eachLayer(layer => {
+          if (layer instanceof L.Marker) {
+            map.removeLayer(layer);
+          }
+        });
+      }
 
       data.pins.forEach(pin => {
         L.marker(pin.coord).addTo(map).bindPopup(pin.address);
       });
-    }, false);
+    });
   </script>
 </body>
 </html>
