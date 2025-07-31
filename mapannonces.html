@@ -2,8 +2,8 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Test Carte</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Carte des annonces</title>
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -13,17 +13,73 @@
       height: 100%;
       margin: 0;
       padding: 0;
+      width: 100%;
     }
   </style>
 </head>
 <body>
   <div id="map"></div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const map = L.map('map').setView([46.5, 2.5], 6);
+    var map = L.map('map').setView([46.5, 2.5], 6);
+
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
+      maxZoom: 18,
+      attribution: '© OpenStreetMap contributors'
     }).addTo(map);
+
+    // Couleurs des pins selon catégorie (RR, RC, DR, DC)
+    var colors = {
+      RR: '#f4a460',  // sable (sandy brown)
+      RC: '#87ceeb',  // bleu ciel (sky blue)
+      DR: '#ffffff',  // blanc (white)
+      DC: '#90ee90'   // vert clair (light green)
+    };
+
+    var markers = [];
+
+    // Fonction pour effacer tous les markers
+    function clearMarkers() {
+      markers.forEach(function(marker) {
+        map.removeLayer(marker);
+      });
+      markers = [];
+    }
+
+    // Fonction pour ajouter des markers à la carte
+    function addMarkers(annonces) {
+      clearMarkers();
+      annonces.forEach(function(annonce) {
+        var color = colors[annonce.category] || 'blue';
+        var marker = L.circleMarker([annonce.lat, annonce.lon], {
+          radius: 8,
+          fillColor: color,
+          color: '#000',
+          weight: 1,
+          opacity: 1,
+          fillOpacity: 0.8
+        }).addTo(map);
+        marker.bindPopup(annonce.titre || '');
+        markers.push(marker);
+      });
+    }
+
+    // Écoute des messages venant de la page parent Wix
+    window.addEventListener('message', function(event) {
+      // Optionnel : vérifier event.origin si tu veux sécuriser la source
+
+      try {
+        var data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        if (data.type === 'annonces') {
+          if (Array.isArray(data.payload)) {
+            addMarkers(data.payload);
+          }
+        }
+      } catch (e) {
+        console.warn('Erreur parsing message:', e);
+      }
+    }, false);
   </script>
 </body>
 </html>
