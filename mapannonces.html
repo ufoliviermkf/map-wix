@@ -32,17 +32,17 @@
       const bounds = [];
 
       data.pins.forEach(pin => {
-        const marker = L.circleMarker(pin.coord, {
-          radius: 8,
-          fillColor: pin.color || "#0000ff",
-          color: "#000",
-          weight: 1,
-          opacity: 1,
-          fillOpacity: 0.8
+        const icon = L.divIcon({
+          className: "custom-pin",
+          html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28">
+            <path fill="${pin.color || '#0000ff'}" stroke="#444" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+          </svg>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 28]
         });
 
-        marker.bindPopup(pin.label || 'Annonce');
-        marker.addTo(markersGroup);
+        const marker = L.marker(pin.coord, { icon }).addTo(markersGroup);
+        marker.bindPopup(pin.address || 'Annonce');
 
         bounds.push(pin.coord);
       });
