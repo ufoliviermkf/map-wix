@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <title>Carte Référents</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -14,41 +14,76 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const map = L.map('map').setView([46.8, 2.5], 6);
-
+    const map = L.map('map').setView([46.8, 2.5], 6); // Centre France
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 18,
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    let markersGroup = L.layerGroup().addTo(map);
+    const markersGroup = L.layerGroup().addTo(map);
 
-    window.addEventListener('message', event => {
-      const data = event.data;
-      if (!data || !Array.isArray(data.pins)) return;
+    // Fonction de géocodage (promesse avec log d'erreurs)
+    async function geocodeAdresse(adresse) {
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(adresse)}&countrycodes=fr&limit=1`;
+        const response = await fetch(url);
+        const data = await response.json();
+        if (data && data[0]) {
+          return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+        } else {
+          console.warn("Pas de résultat pour :", adresse);
+          return null;
+        }
+      } catch (e) {
+        console.error("Erreur géocodage : ", e);
+        return null;
+      }
+    }
+
+    function getColor(role) {
+      if (!role) return "#0000ff"; // par défaut
+      const r = role.toLowerCase();
+      if (r.includes("référent")) return "#4CAF50";   // vert
+      if (r.includes("suppléant")) return "#2196F3";  // bleu
+      return "#999999"; // gris inconnu
+    }
+
+    window.addEventListener("message", async (event) => {
+      const referents = event.data;
+      if (!Array.isArray(referents)) return;
 
       markersGroup.clearLayers();
-
       const bounds = [];
 
-      data.pins.forEach(pin => {
+      for (const ref of referents) {
+        if (!ref.adresse) continue;
+
+        console.log("Géocodage :", ref.nom, ref.adresse);
+
+        const coords = await geocodeAdresse(ref.adresse);
+        if (!coords) continue;
+
+        const color = getColor(ref.codeannonce);
         const icon = L.divIcon({
           className: "custom-pin",
           html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28">
-            <path fill="${pin.color || '#0000ff'}" stroke="#444" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+            <path fill="${color}" stroke="#333" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
           </svg>`,
           iconSize: [28, 28],
           iconAnchor: [14, 28]
         });
 
-        const marker = L.marker(pin.coord, { icon }).addTo(markersGroup);
-        marker.bindPopup(`<b>${pin.label}</b><br>${pin.address}`);
+        const marker = L.marker(coords, { icon }).addTo(markersGroup);
+        marker.bindPopup(`<b>${ref.nom}</b><br>${ref.adresse}`);
 
-        bounds.push(pin.coord);
-      });
+        bounds.push(coords);
+
+        await new Promise(r => setTimeout(r, 1000)); // Pause pour éviter blocage Nominatim
+      }
 
       if (bounds.length > 0) {
         map.fitBounds(bounds, { padding: [20, 20] });
+      } else {
+        console.warn("Aucun point valide trouvé.");
       }
     });
   </script>
