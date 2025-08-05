@@ -51,9 +51,7 @@
 
         L.marker([lat, lng], { icon })
           .bindPopup(`<b>${pin.label || "Sans nom"}</b><br>${pin.address || ""}`)
-          if (pin.tel) {
-  popupContent += `<br>Tél : <a href="tel:${pin.tel}">${pin.tel}</a>`;
-}
+        .bindPopup(`<b>${pin.label || "Sans nom"}</b><br>${pin.tel || ""}`)
           .addTo(markers);
 
         bounds.push([lat, lng]);
@@ -66,4 +64,5 @@
   </script>
 </body>
 </html>
+
 
