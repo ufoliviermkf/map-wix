@@ -11,43 +11,53 @@
 </head>
 <body>
   <div id="map"></div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     const map = L.map('map').setView([46.8, 2.4], 6);
+
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
+
     const markers = L.layerGroup().addTo(map);
 
     window.addEventListener('message', event => {
       const data = event.data;
-      if (!data || !data.pins) {
-        console.warn("Message reçu sans pins:", data);
+      if (!data || !data.pins || !Array.isArray(data.pins)) {
+        console.warn("Message invalide reçu :", data);
         return;
       }
-      console.log("Message reçu pins:", data.pins);
+
+      console.log("🗺️ Pins reçus :", data.pins);
 
       markers.clearLayers();
       const bounds = [];
 
       data.pins.forEach(pin => {
-        if (!pin.coord) return;
+        if (!pin.coord || pin.coord.length !== 2) return;
+
+        const [lat, lng] = pin.coord;
+
         const icon = L.divIcon({
           html: `<svg viewBox="0 0 24 24" width="28" height="28">
-            <path fill="${pin.color}" stroke="#333" d="M12 2C8.13 2 5 5.13 5 9
+            <path fill="${pin.color || '#AAAAAA'}" stroke="#333" d="M12 2C8.13 2 5 5.13 5 9
             c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
           </svg>`,
           className: "",
           iconSize: [28,28],
           iconAnchor: [14,28]
         });
-        L.marker(pin.coord, { icon }).bindPopup(`<b>${pin.label}</b><br>${pin.address}`)
+
+        L.marker([lat, lng], { icon })
+          .bindPopup(`<b>${pin.label || "Sans nom"}</b><br>${pin.address || ""}`)
           .addTo(markers);
-        bounds.push(pin.coord);
+
+        bounds.push([lat, lng]);
       });
 
-      if (bounds.length) {
-        map.fitBounds(bounds, {padding:[20,20], maxZoom:14});
+      if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [20, 20], maxZoom: 14 });
       }
     });
   </script>
